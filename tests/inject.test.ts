@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 
 import { extractIndeed, extractLinkedIn } from '../src/content/extract'
-import { createInjector, HOST_ATTRIBUTE } from '../src/content/inject'
+import { createInjector, HOST_ATTRIBUTE, PANEL_ATTRIBUTE, pageTheme } from '../src/content/inject'
 import type { LookupOutcome } from '../src/shared/messages'
 import { amazonPossible, starling } from './fixtures'
 
@@ -19,6 +19,10 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 function hosts(doc: Document): HTMLElement[] {
   return [...doc.querySelectorAll<HTMLElement>(`[${HOST_ATTRIBUTE}]`)]
+}
+
+function panels(doc: Document): HTMLElement[] {
+  return [...doc.querySelectorAll<HTMLElement>(`[${PANEL_ATTRIBUTE}]`)]
 }
 
 function badgeText(host: HTMLElement): string {
@@ -113,17 +117,70 @@ describe('injector', () => {
     expect(badgeText(hosts(doc)[0]!)).toBe("Couldn't check")
   })
 
-  it('opens the details panel on click, with the attribution', async () => {
+  it('opens the details panel on click, attached to the page body so no container clips it', async () => {
     const { doc, injector } = setup('indeed-3.html', extractIndeed)
     injector.scan()
     await flush()
-    const root = hosts(doc)[0]!.shadowRoot!
-    const panel = root.querySelector<HTMLElement>('.panel')!
-    expect(panel.hidden).toBe(true)
-    root.querySelector<HTMLElement>('.badge')!.click()
-    expect(panel.hidden).toBe(false)
-    expect(panel.textContent).toContain('STARLING BANK LIMITED')
-    expect(panel.textContent).toContain('Open Government Licence v3.0')
-    expect(panel.textContent).toContain('This is not immigration advice.')
+    const badge = hosts(doc)[0]!.shadowRoot!.querySelector<HTMLElement>('.badge')!
+    expect(panels(doc)).toHaveLength(0)
+    badge.click()
+    const [panelHost] = panels(doc)
+    expect(panelHost!.parentElement).toBe(doc.body)
+    expect(badge.getAttribute('aria-expanded')).toBe('true')
+    const text = panelHost!.shadowRoot!.textContent!
+    expect(text).toContain('STARLING BANK LIMITED')
+    expect(text).toContain('Open Government Licence v3.0')
+    expect(text).toContain('This is not immigration advice.')
+  })
+
+  it.each([
+    ['a second click on the badge', (badge: HTMLElement) => badge.click()],
+    ['Escape', () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))],
+    ['a click elsewhere', () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true, composed: true }))],
+  ])('closes the panel on %s', async (_case, close) => {
+    const { doc, injector } = setup('indeed-1.html', extractIndeed)
+    injector.scan()
+    await flush()
+    const badge = hosts(doc)[0]!.shadowRoot!.querySelector<HTMLElement>('.badge')!
+    badge.click()
+    close(badge)
+    expect(panels(doc)).toHaveLength(0)
+    expect(badge.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('keeps the panel open and under the badge when the page scrolls', async () => {
+    const { doc, injector } = setup('indeed-1.html', extractIndeed)
+    injector.scan()
+    await flush()
+    hosts(doc)[0]!.shadowRoot!.querySelector<HTMLElement>('.badge')!.click()
+    doc.body.dispatchEvent(new Event('scroll')) // e.g. Indeed's job pane scrolling
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(panels(doc)).toHaveLength(1)
+  })
+
+  it('closes the panel when the user moves to another job', async () => {
+    const { doc, injector } = setup('linkedin-1.html')
+    injector.scan()
+    await flush()
+    hosts(doc)[0]!.shadowRoot!.querySelector<HTMLElement>('.badge')!.click()
+    doc.querySelector('a.topcard__org-name-link')!.textContent = 'Amazon'
+    injector.scan()
+    expect(panels(doc)).toHaveLength(0)
+  })
+
+})
+
+describe('pageTheme', () => {
+  function inside(background: string): Element {
+    document.body.innerHTML = `<div style="background-color: ${background}"><p><a>Acme</a></p></div>`
+    return document.querySelector('a')!
+  }
+
+  it.each([
+    ['rgb(255, 255, 255)', 'light'],
+    ['rgb(29, 34, 38)', 'dark'], // LinkedIn's dark mode
+    ['rgba(0, 0, 0, 0)', 'light'], // transparent all the way up: assume light
+  ])('%s -> %s', (background, theme) => {
+    expect(pageTheme(inside(background))).toBe(theme)
   })
 })

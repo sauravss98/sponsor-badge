@@ -31,6 +31,7 @@ async function open(url: string, fixture: string): Promise<Page> {
 
 // Playwright locators pierce the badge's open shadow root.
 const badge = (page: Page) => page.locator('[data-sponsor-badge] .badge')
+const panel = (page: Page) => page.locator('[data-sponsor-badge-panel] .panel')
 
 test('LinkedIn: Deliveroo gets a green badge next to its name', async () => {
   const page = await open('https://www.linkedin.com/jobs/view/1/', 'linkedin-3.html')
@@ -39,8 +40,8 @@ test('LinkedIn: Deliveroo gets a green badge next to its name', async () => {
   await expect(page.locator('[data-sponsor-badge]')).toHaveCount(1)
 
   await badge(page).click()
-  await expect(page.locator('[data-sponsor-badge] .panel')).toBeVisible()
-  await expect(page.locator('[data-sponsor-badge] .panel')).toContainText('This is not immigration advice.')
+  await expect(panel(page)).toBeVisible()
+  await expect(panel(page)).toContainText('This is not immigration advice.')
 })
 
 test('LinkedIn: the badge follows the page to another job without a reload', async () => {
@@ -58,4 +59,22 @@ test('Indeed: the open job gets the badge, not the list', async () => {
   await expect(badge(page)).not.toHaveText('Checking sponsor licence...')
   const header = page.locator('[data-testid="desktop-job-header"]')
   await expect(header.locator('[data-sponsor-badge]')).toHaveCount(1)
+})
+
+test('Indeed: the panel is not clipped by a job header that hides overflow', async () => {
+  const page = await open('https://uk.indeed.com/jobs?q=engineer', 'indeed-1.html')
+  // What the live site does (seen 2026-10-16): the header clips anything that overflows it.
+  await page.addStyleTag({
+    content: '[data-testid="desktop-job-header"] { overflow: hidden; max-height: 120px; }',
+  })
+  await expect(badge(page)).not.toHaveText('Checking sponsor licence...')
+  await badge(page).click()
+  await expect(panel(page)).toBeVisible()
+  const header = await page.locator('[data-testid="desktop-job-header"]').boundingBox()
+  const box = await panel(page).boundingBox()
+  expect(box!.height).toBeGreaterThan(150) // the whole panel, not a sliver
+  expect(box!.y + box!.height).toBeGreaterThan(header!.y + header!.height) // extends past the header
+
+  await page.keyboard.press('Escape')
+  await expect(panel(page)).toHaveCount(0)
 })
