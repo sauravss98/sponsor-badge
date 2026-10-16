@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:prod": "node build.mjs --prod",
     "watch": "node build.mjs --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

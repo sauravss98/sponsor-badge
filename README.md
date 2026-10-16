@@ -51,6 +51,7 @@ Then open `chrome://extensions`, turn on Developer mode, choose **Load unpacked*
 | Command | What it does |
 |---|---|
 | `npm run build` / `npm run watch` | Bundle `src/` with esbuild and copy `static/` into `dist/` |
+| `npm run build:prod` | Same, pointed at the deployed API (`https://sponsor-check.onrender.com`) |
 | `npm test` | Unit tests (Vitest), offline, with the API mocked |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run check` | All three |
