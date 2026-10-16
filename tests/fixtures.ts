@@ -1,6 +1,6 @@
 // Real /v1/lookup responses from sponsor-check (register of 2026-09-29), trimmed only where noted.
 
-import type { LookupResult } from '../src/api/types'
+import type { LookupResult, SalaryFloors } from '../src/api/types'
 
 const CAVEAT =
   'Being on the register means the employer can sponsor, not that it will sponsor this ' +
@@ -46,4 +46,18 @@ export const notFound: LookupResult = {
 
 export function withStatus(status: string, rating: string | null = 'A'): LookupResult {
   return { ...starling, status, rating }
+}
+
+// A real /v1/salary-check response (production, 2026-10-16), amount 38000, notes trimmed.
+export const floors: SalaryFloors = {
+  salary: 38000,
+  route: 'Skilled Worker',
+  general_threshold: 41700,
+  meets_general: false,
+  new_entrant_threshold: 33400,
+  meets_new_entrant: true,
+  hours_per_week_basis: 37.5,
+  weeks_per_year_basis: 52,
+  thresholds: { effective_date: '2025-11-11', source_url: 'https://www.gov.uk/skilled-worker-visa/your-job' },
+  notes: ['These are the flat salary floors only.', 'This is not immigration advice.'],
 }

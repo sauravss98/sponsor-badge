@@ -2,15 +2,26 @@
 // Free of chrome.* so it can be tested with jsdom; index.ts wires it to the extension.
 
 import { badgeFor } from '../shared/badge'
-import type { LookupOutcome } from '../shared/messages'
-import { attribution, badgeElement, details } from '../shared/render'
-import { clean, type Extractor } from './extract'
+import type { LookupOutcome, SalaryOutcome } from '../shared/messages'
+import { attribution, badgeElement, details, salarySection } from '../shared/render'
+import { parseSalary, type ParsedSalary } from '../shared/salary'
+import { requestAmount, salaryView } from '../shared/salaryView'
+import { clean, type Extractor, type SalaryExtractor } from './extract'
 import { BADGE_CSS, PANEL_CSS } from './styles'
 
 export interface InjectorDeps {
   doc: Document
   extract: Extractor
   lookup: (name: string) => Promise<LookupOutcome>
+  /** Optional: reads the open job's salary text. Without it the panel has no salary section. */
+  extractSalary?: SalaryExtractor
+  checkSalary?: (amount: number) => Promise<SalaryOutcome>
+}
+
+interface SalaryState {
+  text: string
+  parsed: ParsedSalary
+  outcome?: SalaryOutcome
 }
 
 export const HOST_ATTRIBUTE = 'data-sponsor-badge'
@@ -23,11 +34,15 @@ interface Placed {
   name: string
   anchor: Element
   host: HTMLElement
+  lookup?: LookupOutcome
+  salary: SalaryState | null
 }
 
-export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan(): void } {
+export function createInjector(deps: InjectorDeps): { scan(): void } {
+  const { doc, extract, lookup } = deps
   let placed: Placed | null = null
   let closePanel: (() => void) | null = null
+  let refreshPanel: (() => void) | null = null
 
   function scan(): void {
     // Still the same job (its name link is in the page with the same text): keep the badge, even
@@ -35,6 +50,7 @@ export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan()
     // page re-rendered over the badge, put the same one back without a new lookup.
     if (placed && placed.anchor.isConnected && clean(placed.anchor.textContent) === placed.name) {
       if (!placed.host.isConnected) placed.anchor.insertAdjacentElement('afterend', placed.host)
+      updateSalary(placed) // another job at the same company can show a different salary
       return
     }
 
@@ -54,14 +70,49 @@ export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan()
     root.append(style, badge)
     found.anchor.insertAdjacentElement('afterend', host)
     host.dataset.theme = pageTheme(found.anchor)
-    placed = { name: found.name, anchor: found.anchor, host }
+    const current: Placed = { name: found.name, anchor: found.anchor, host, salary: null }
+    placed = current
+    updateSalary(current)
 
     lookup(found.name)
       .catch((): LookupOutcome => ({ kind: 'unavailable', reason: 'network' }))
       .then((outcome) => {
         // The user may have moved to another job while this was in flight.
-        if (placed?.host === host) render(host, root, outcome)
+        if (placed !== current) return
+        current.lookup = outcome
+        render(host, root, outcome)
       })
+  }
+
+  /** Re-reads the salary; on a change, asks the API (only the amount) and refreshes the panel. */
+  function updateSalary(current: Placed): void {
+    if (!deps.extractSalary) return
+    const text = deps.extractSalary(doc)
+    if ((text ?? null) === (current.salary?.text ?? null)) return
+    const parsed = text ? parseSalary(text) : null
+    const state: SalaryState | null = text && parsed ? { text, parsed } : null
+    current.salary = state
+    refreshPanel?.()
+
+    const amount = state && requestAmount(state.parsed)
+    if (!state || amount === null || !deps.checkSalary) return
+    deps.checkSalary(amount)
+      .catch((): SalaryOutcome => ({ kind: 'unavailable', reason: 'network' }))
+      .then((outcome) => {
+        if (current.salary !== state) return // the salary changed again meanwhile
+        state.outcome = outcome
+        refreshPanel?.()
+      })
+  }
+
+  function panelContent(current: Placed): Node[] {
+    const parts = current.lookup ? details(doc, current.lookup) : []
+    if (current.salary) {
+      const { text, parsed, outcome } = current.salary
+      parts.push(salarySection(doc, salaryView(text, parsed, outcome)))
+    }
+    parts.push(attribution(doc))
+    return parts
   }
 
   function render(host: HTMLElement, root: ShadowRoot, outcome: LookupOutcome): void {
@@ -72,12 +123,12 @@ export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan()
       event.preventDefault()
       event.stopPropagation()
       if (closePanel) closePanel()
-      else openPanel(host, badge, outcome)
+      else if (placed) openPanel(host, badge, placed)
     })
     root.replaceChildren(root.querySelector('style')!, badge)
   }
 
-  function openPanel(host: HTMLElement, badge: HTMLElement, outcome: LookupOutcome): void {
+  function openPanel(host: HTMLElement, badge: HTMLElement, current: Placed): void {
     const panelHost = doc.createElement('div')
     panelHost.setAttribute(PANEL_ATTRIBUTE, '')
     panelHost.dataset.theme = host.dataset.theme ?? 'light'
@@ -88,7 +139,8 @@ export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan()
     panel.className = 'panel'
     panel.setAttribute('role', 'dialog')
     panel.setAttribute('aria-label', 'Sponsor licence details')
-    panel.append(...details(doc, outcome), attribution(doc))
+    panel.append(...panelContent(current))
+    refreshPanel = () => panel.replaceChildren(...panelContent(current))
     root.append(style, panel)
 
     const view = doc.defaultView!
@@ -131,6 +183,7 @@ export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan()
       doc.removeEventListener('scroll', onMove, { capture: true })
       view.removeEventListener('resize', onMove)
       closePanel = null
+      refreshPanel = null
     }
     closePanel = close
   }

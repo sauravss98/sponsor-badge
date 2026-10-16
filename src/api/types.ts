@@ -28,6 +28,19 @@ export interface LookupResult {
   notes: string[]
 }
 
+export interface SalaryFloors {
+  salary: number
+  route: string
+  general_threshold: number
+  meets_general: boolean
+  new_entrant_threshold: number
+  meets_new_entrant: boolean
+  hours_per_week_basis: number
+  weeks_per_year_basis: number
+  thresholds: { effective_date: string; source_url: string }
+  notes: string[]
+}
+
 export const REGISTER_PAGE =
   'https://www.gov.uk/government/publications/register-of-licensed-sponsors-workers'
 

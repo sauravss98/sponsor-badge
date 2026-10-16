@@ -3,6 +3,7 @@
 
 import { badgeFor, panelFor, type BadgeView } from './badge'
 import type { LookupOutcome } from './messages'
+import type { SalaryView } from './salaryView'
 
 const OGL = 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/'
 
@@ -44,6 +45,23 @@ export function details(doc: Document, outcome: LookupOutcome): Node[] {
       `Too many checks just now. Try again in ${outcome.retryAfterSeconds} s.`))
   }
   return parts
+}
+
+/** The salary part of the panel: a heading, the comparison rows and the API's salary notes. */
+export function salarySection(doc: Document, view: SalaryView): HTMLElement {
+  const section = doc.createElement('section')
+  section.className = 'salary'
+  section.append(el(doc, 'h3', 'Salary'))
+  const list = doc.createElement('dl')
+  for (const [term, value] of view.rows) list.append(el(doc, 'dt', term), el(doc, 'dd', value))
+  section.append(list)
+  if (view.notes.length) {
+    const notes = doc.createElement('ul')
+    notes.className = 'notes'
+    for (const note of view.notes) notes.append(el(doc, 'li', note))
+    section.append(notes)
+  }
+  return section
 }
 
 /** "Not immigration advice" and the Open Government Licence attribution. */

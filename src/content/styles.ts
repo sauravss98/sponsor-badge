@@ -74,6 +74,8 @@ ul.notes { margin: 8px 0 0; padding-left: 18px; }
 ul.notes li + li { margin-top: 4px; }
 p { margin: 0; }
 a { color: var(--accent); }
+section.salary { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+h3 { margin: 0; font-size: 13px; }
 footer {
   margin-top: 10px;
   padding-top: 8px;

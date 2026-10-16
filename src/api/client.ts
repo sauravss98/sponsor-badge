@@ -3,7 +3,7 @@
 // Every failure comes back as a typed result instead of a thrown error, so callers can't
 // accidentally show "Not found on register" when the API simply didn't answer.
 
-import type { LookupResult } from './types'
+import type { LookupResult, SalaryFloors } from './types'
 
 export type ApiFailure =
   | { kind: 'rate_limited'; retryAfterSeconds: number }
@@ -29,6 +29,12 @@ export function lookup(name: string, options: ClientOptions): Promise<ApiResult<
   // Only the employer name is sent: no route (always Skilled Worker), no page URL.
   const url = `${options.base}/v1/lookup?name=${encodeURIComponent(name)}`
   return getJson(url, options, isLookupResult)
+}
+
+/** The yearly floors and their basis. Only the amount is sent. */
+export function salaryCheck(amount: number, options: ClientOptions): Promise<ApiResult<SalaryFloors>> {
+  const url = `${options.base}/v1/salary-check?amount=${encodeURIComponent(String(amount))}`
+  return getJson(url, options, isSalaryFloors)
 }
 
 async function getJson<T>(
@@ -101,5 +107,20 @@ export function isLookupResult(data: unknown): data is LookupResult {
     d.notes.every((n) => typeof n === 'string') &&
     typeof d.register_date === 'string' &&
     typeof d.confidence === 'number'
+  )
+}
+
+export function isSalaryFloors(data: unknown): data is SalaryFloors {
+  if (typeof data !== 'object' || data === null) return false
+  const d = data as Record<string, unknown>
+  const t = d.thresholds as Record<string, unknown> | null | undefined
+  return (
+    typeof d.general_threshold === 'number' &&
+    typeof d.new_entrant_threshold === 'number' &&
+    typeof d.hours_per_week_basis === 'number' &&
+    typeof d.weeks_per_year_basis === 'number' &&
+    typeof t === 'object' && t !== null && typeof t.effective_date === 'string' &&
+    Array.isArray(d.notes) &&
+    d.notes.every((n) => typeof n === 'string')
   )
 }

@@ -77,6 +77,27 @@ export function clean(text: string | null): string {
 }
 export const extractIndeed: Extractor = (doc) => firstMatch(doc, INDEED)
 
+/** Reads the open job's advertised salary text, or null when the page shows none. */
+export type SalaryExtractor = (doc: Document) => string | null
+
+const INDEED_SALARY: string[] = [] // filled in from a saved page showing an open job's salary
+const LINKEDIN_SALARY: string[] = [] // filled in once the logged-in layout has been measured
+
+export function salaryExtractorFor(hostname: string): SalaryExtractor {
+  const selectors = hostname === 'uk.indeed.com' ? INDEED_SALARY
+    : hostname === 'www.linkedin.com' || hostname === 'linkedin.com' ? LINKEDIN_SALARY
+    : []
+  return (doc) => {
+    for (const selector of selectors) {
+      for (const node of doc.querySelectorAll(selector)) {
+        const text = clean(node.textContent)
+        if (text.includes('£')) return text
+      }
+    }
+    return null
+  }
+}
+
 /** The extractor for a hostname, or null on sites we don't support. */
 export function extractorFor(hostname: string): Extractor | null {
   if (hostname === 'www.linkedin.com' || hostname === 'linkedin.com') return extractLinkedIn
