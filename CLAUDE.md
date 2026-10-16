@@ -40,6 +40,10 @@ e2e/             Playwright smoke test, needs the local API
 - Write DOM with `textContent`, never `innerHTML`: register names are untrusted.
 - Content scripts read only the employer name. Every selector in `extract.ts` is tagged
   `fixture` (tested on a saved page) or `untested`. Add a fixture before trusting a new one.
+- Logged-in LinkedIn scrambles class names: never select on them. `linkedInLoggedIn()` takes the
+  `main a[href*="/company/"]` link with no <img> or aria-label whose text equals the company in
+  the title ("Job | Company | LinkedIn"). No title match means no badge; don't add a fallback
+  that picks "the first link" (it hits "Similar jobs").
 - Fixtures must be saved logged out and cleaned with `scripts/clean-fixture.mjs`; check them for
   names, emails and tokens before committing.
 - The content script is built as an IIFE (Chrome doesn't run content scripts as modules); the

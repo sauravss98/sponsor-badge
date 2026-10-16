@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 import { describe, expect, it } from 'vitest'
 
-import { extractIndeed, extractLinkedIn, extractorFor } from '../src/content/extract'
+import { companyFromTitle, extractIndeed, extractLinkedIn, extractorFor } from '../src/content/extract'
 
 // Real pages saved logged out (see scripts/clean-fixture.mjs), with the employer each one shows.
 function page(file: string): Document {
@@ -31,10 +31,55 @@ describe('LinkedIn', () => {
     expect(extractLinkedIn(doc)).toBeNull()
   })
 
-  it('reads the logged-in markup we expect (no saved page yet)', () => {
-    const doc = html(`<div class="job-details-jobs-unified-top-card__company-name">
-      <a href="/company/starling-bank/">  Starling   Bank </a></div>`)
-    expect(extractLinkedIn(doc)?.name).toBe('Starling Bank')
+})
+
+// Logged-in LinkedIn, rebuilt from the structure measured on a real /jobs/search-results page on
+// 2026-10-16 (link targets, images, aria-labels; the scrambled class names are made up).
+function loggedIn(title: string, company = 'Teton'): Document {
+  const doc = html(`<main>
+    <ul class="iiik16"><li class="iiimdi">Software Engineer, Some Other Ltd</li></ul>
+    <div class="iiil4g">
+      <a class="iiimuy" href="/company/teton-ai/life/"><img alt="${company}"> ${company}</a>
+      <a class="iiigaj" href="/company/teton-ai/life/">${company}</a>
+      <h1>Software Engineer (Backend) - London</h1>
+      <a class="iiimuy" href="/company/teton-ai/life/"><img alt="">${company}12,038 followers</a>
+      <a class="iiimdi" href="/company/teton-ai/life/" aria-label="Show more about the company">Show more</a>
+    </div></main>`)
+  doc.title = title
+  return doc
+}
+
+describe('LinkedIn, logged in (scrambled class names)', () => {
+  it('takes the plain company link that matches the page title', () => {
+    const doc = loggedIn('(2) Software Engineer (Backend) - London | Teton | LinkedIn')
+    const employer = extractLinkedIn(doc)
+    expect(employer?.name).toBe('Teton')
+    expect(employer?.anchor.querySelector('img')).toBeNull() // not the logo link
+  })
+
+  it('shows no badge when the title names a different company (e.g. mid-navigation)', () => {
+    expect(extractLinkedIn(loggedIn('Data Engineer | Deliveroo | LinkedIn'))).toBeNull()
+  })
+
+  it('shows no badge when the title names no company, rather than guess a link', () => {
+    expect(extractLinkedIn(loggedIn('Jobs | LinkedIn'))).toBeNull()
+  })
+
+  it('ignores company links outside the main content', () => {
+    const doc = html('<nav><a href="/company/acme/">Acme</a></nav><main></main>')
+    doc.title = 'Engineer | Acme | LinkedIn'
+    expect(extractLinkedIn(doc)).toBeNull()
+  })
+})
+
+describe('companyFromTitle', () => {
+  it.each([
+    ['Software Engineer (Backend) - London | Teton | LinkedIn', 'Teton'],
+    ['(3) Engineer | Analyst | Roofoods Ltd | LinkedIn', 'Roofoods Ltd'],
+    ['Jobs | LinkedIn', null],
+    ['Teton | Glassdoor', null],
+  ])('%s -> %s', (title, expected) => {
+    expect(companyFromTitle(title)).toBe(expected)
   })
 })
 

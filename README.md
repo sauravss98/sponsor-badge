@@ -68,10 +68,15 @@ open the job in a private window, press Ctrl+S, save as "Webpage, Complete" into
 then run `node scripts/clean-fixture.mjs fixtures/<file>.html`. That strips scripts, styles and
 tracking tokens. The `_files` folder Chrome saves alongside is ignored by git.
 
-Supported layouts: LinkedIn's logged-out job page and Indeed UK's search page with a job open
-are tested against saved pages. LinkedIn's logged-in job view and Indeed's standalone job page
-use best-guess selectors that no saved page covers yet (marked `untested` in
-`src/content/extract.ts`). If they're wrong, no badge appears; a wrong badge can't.
+Supported layouts:
+- LinkedIn logged out and Indeed UK's search page with a job open: tested against saved pages.
+- LinkedIn logged in: its class names are scrambled and change every release, so the extension
+  uses the page title ("Job | Company | LinkedIn") and the plain company link in the job pane
+  instead. Tested against the structure measured on a real page, not a saved copy.
+- Indeed's standalone job page: best-guess selectors, marked `untested` in
+  `src/content/extract.ts`.
+
+Whenever the extension can't confirm the employer, no badge appears. It never guesses.
 
 ## Licence
 
