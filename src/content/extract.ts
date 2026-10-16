@@ -36,17 +36,33 @@ export const extractLinkedIn: Extractor = (doc) =>
  *   (logo inside) and "Show more" (has an aria-label). The job list has no company links.
  */
 function linkedInLoggedIn(doc: Document): Employer | null {
-  const named: Employer[] = []
-  for (const anchor of doc.querySelectorAll('main a[href*="/company/"]')) {
-    if (anchor.querySelector('img') || anchor.hasAttribute('aria-label')) continue
-    const name = clean(anchor.textContent)
-    if (name && name.length <= MAX_NAME_LENGTH) named.push({ name, anchor })
-  }
-  // Only a link the title confirms will do. Without that check, a page with no open job would
-  // badge the first company under "Similar jobs": no badge beats a wrong one.
+  const links = [...doc.querySelectorAll('main a[href*="/company/"]')]
+
+  // 1. A plain link whose name the title confirms.
   const fromTitle = companyFromTitle(doc.title)
-  if (!fromTitle) return null
-  return named.find((e) => e.name.toLowerCase() === fromTitle.toLowerCase()) ?? null
+  if (fromTitle) {
+    for (const anchor of links) {
+      const employer = plainLink(anchor)
+      if (employer && employer.name.toLowerCase() === fromTitle.toLowerCase()) return employer
+    }
+  }
+
+  // 2. The job header's own shape, for when the title says something else (LinkedIn retitles the
+  //    tab, e.g. with notification counts): the first company link on the page is the logo and
+  //    the next is the plain name, both to the same company page. "Similar jobs" comes later in
+  //    the page, so it can't match. Anything else: no badge beats a wrong one.
+  const [logo, name] = links
+  if (logo?.querySelector('img') && name && name.getAttribute('href') === logo.getAttribute('href')) {
+    return plainLink(name)
+  }
+  return null
+}
+
+/** A company link showing just the name: no logo inside, no "Show more"-style aria-label. */
+function plainLink(anchor: Element): Employer | null {
+  if (anchor.querySelector('img') || anchor.hasAttribute('aria-label')) return null
+  const name = clean(anchor.textContent)
+  return name && name.length <= MAX_NAME_LENGTH ? { name, anchor } : null
 }
 
 /** "(3) Job title | Company | LinkedIn" -> "Company"; null for any other shape. */
@@ -56,7 +72,7 @@ export function companyFromTitle(title: string): string | null {
   return parts[parts.length - 2] || null
 }
 
-function clean(text: string | null): string {
+export function clean(text: string | null): string {
   return (text ?? '').replace(/\s+/g, ' ').trim()
 }
 export const extractIndeed: Extractor = (doc) => firstMatch(doc, INDEED)

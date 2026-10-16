@@ -57,12 +57,28 @@ describe('LinkedIn, logged in (scrambled class names)', () => {
     expect(employer?.anchor.querySelector('img')).toBeNull() // not the logo link
   })
 
-  it('shows no badge when the title names a different company (e.g. mid-navigation)', () => {
-    expect(extractLinkedIn(loggedIn('Data Engineer | Deliveroo | LinkedIn'))).toBeNull()
+  it('uses the header shape (logo link, then the name link) when the title says something else', () => {
+    for (const title of ['Jobs | LinkedIn', '(5) Messaging | LinkedIn', 'Data Engineer | Deliveroo | LinkedIn']) {
+      const employer = extractLinkedIn(loggedIn(title))
+      expect(employer?.name).toBe('Teton')
+      expect(employer?.anchor.querySelector('img')).toBeNull()
+    }
   })
 
-  it('shows no badge when the title names no company, rather than guess a link', () => {
-    expect(extractLinkedIn(loggedIn('Jobs | LinkedIn'))).toBeNull()
+  it('shows no badge when the page does not start with a job header', () => {
+    const doc = html(`<main>
+      <a href="/company/acme/">Acme</a>
+      <a href="/company/other/"><img alt="">Other</a></main>`)
+    doc.title = 'Jobs | LinkedIn'
+    expect(extractLinkedIn(doc)).toBeNull()
+  })
+
+  it('does not pair a logo with a link to a different company', () => {
+    const doc = html(`<main>
+      <a href="/company/acme/"><img alt=""></a>
+      <a href="/company/other/">Other</a></main>`)
+    doc.title = 'Jobs | LinkedIn'
+    expect(extractLinkedIn(doc)).toBeNull()
   })
 
   it('ignores company links outside the main content', () => {

@@ -62,13 +62,26 @@ describe('injector', () => {
     expect(hosts(doc)).toHaveLength(1)
   })
 
-  it('puts the badge back if the page re-renders over it', () => {
+  it('puts the same badge back if the page re-renders over it, without a new lookup', () => {
     const { doc, lookup, injector } = setup('linkedin-2.html')
     injector.scan()
-    hosts(doc)[0]!.remove()
+    const [host] = hosts(doc)
+    host!.remove()
+    injector.scan()
+    expect(hosts(doc)).toEqual([host])
+    expect(lookup).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the badge while the same job is open, even if the extractor stops confirming it', () => {
+    const doc = load('linkedin-2.html')
+    const lookup = vi.fn<(name: string) => Promise<LookupOutcome>>()
+      .mockResolvedValue({ kind: 'ok', result: starling })
+    let confirm = true
+    const injector = createInjector({ doc, lookup, extract: (d) => (confirm ? extractLinkedIn(d) : null) })
+    injector.scan()
+    confirm = false // e.g. LinkedIn retitled the tab
     injector.scan()
     expect(hosts(doc)).toHaveLength(1)
-    expect(lookup).toHaveBeenCalledTimes(2)
   })
 
   it('removes the badge when no job is open', () => {

@@ -4,7 +4,7 @@
 import { badgeFor } from '../shared/badge'
 import type { LookupOutcome } from '../shared/messages'
 import { attribution, badgeElement, details } from '../shared/render'
-import type { Extractor } from './extract'
+import { clean, type Extractor } from './extract'
 import { CSS } from './styles'
 
 export interface InjectorDeps {
@@ -25,6 +25,14 @@ export function createInjector({ doc, extract, lookup }: InjectorDeps): { scan()
   let placed: Placed | null = null
 
   function scan(): void {
+    // Still the same job (its name link is in the page with the same text): keep the badge, even
+    // if the extractor can't confirm it right now, e.g. because LinkedIn retitled the tab. If the
+    // page re-rendered over the badge, put the same one back without a new lookup.
+    if (placed && placed.anchor.isConnected && clean(placed.anchor.textContent) === placed.name) {
+      if (!placed.host.isConnected) placed.anchor.insertAdjacentElement('afterend', placed.host)
+      return
+    }
+
     const found = extract(doc)
     if (!found) {
       // No job open (e.g. LinkedIn between views): drop the badge rather than leave a stale one.
