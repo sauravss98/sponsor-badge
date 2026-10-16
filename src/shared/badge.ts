@@ -79,7 +79,8 @@ export function panelFor(result: LookupResult): PanelView {
     legalName: result.legal_name,
     town: result.town,
     rating: result.rating,
-    routes: result.routes.map((r) => `${r.route} (${r.rating})`),
+    // The register can list the same licence twice (e.g. Deliveroo's), so show each once.
+    routes: [...new Set(result.routes.map((r) => `${r.route} (${r.rating})`))],
     registerDate: result.register_date,
     registerUrl: result.register_url ?? REGISTER_PAGE,
     confidence: result.confidence,

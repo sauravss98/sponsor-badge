@@ -4,8 +4,9 @@ A Chrome extension (Manifest V3, TypeScript) for international students and grad
 for UK jobs. It shows whether an employer is on the Home Office register of licensed visa
 sponsors, using the [sponsor-check](https://github.com/sauravss98/sponsor-check) API.
 
-Status: Milestone 3 of [the plan](docs/PLAN-sponsor-badge.md). The popup search works; badges on
-LinkedIn and Indeed come in M4.
+Status: Milestone 4 of [the plan](docs/PLAN-sponsor-badge.md). A badge appears next to the
+employer on LinkedIn and Indeed UK job pages, and the popup has a manual search. Click a badge
+for the details. Salary checks come in M5.
 
 ## What the badge means
 
@@ -27,8 +28,9 @@ This is not immigration advice.
   identifiers.
 - No analytics. Results are cached in `chrome.storage.session`, which is cleared when the browser
   closes.
-- Permissions: `storage` only, for now. M4 adds host permissions for the supported job boards
-  only. The API is reached through CORS, so it needs no host permission.
+- Permissions: `storage`, plus a content script on `www.linkedin.com` and `uk.indeed.com` only.
+  LinkedIn needs the whole site because it moves from the feed to a job without a page load.
+  The API is reached through CORS, so it needs no host permission.
 
 ## Development
 
@@ -58,6 +60,18 @@ Then open `chrome://extensions`, turn on Developer mode, choose **Load unpacked*
 | `npm run e2e` | Loads `dist/` in Chromium (Playwright) and searches against the local API |
 
 `SPONSOR_BADGE_API_BASE` changes the API the build points at (default `http://127.0.0.1:8000`).
+
+### Test pages
+
+`fixtures/` holds real job pages, saved logged out, that the extractor tests read. To add one:
+open the job in a private window, press Ctrl+S, save as "Webpage, Complete" into `fixtures/`,
+then run `node scripts/clean-fixture.mjs fixtures/<file>.html`. That strips scripts, styles and
+tracking tokens. The `_files` folder Chrome saves alongside is ignored by git.
+
+Supported layouts: LinkedIn's logged-out job page and Indeed UK's search page with a job open
+are tested against saved pages. LinkedIn's logged-in job view and Indeed's standalone job page
+use best-guess selectors that no saved page covers yet (marked `untested` in
+`src/content/extract.ts`). If they're wrong, no badge appears; a wrong badge can't.
 
 ## Licence
 

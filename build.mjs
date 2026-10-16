@@ -11,10 +11,8 @@ const LOCAL_API = 'http://127.0.0.1:8000'
 const apiBase =
   process.env.SPONSOR_BADGE_API_BASE ?? (process.argv.includes('--prod') ? PROD_API : LOCAL_API)
 
-const options = {
-  entryPoints: { background: 'src/background/index.ts', popup: 'src/popup/popup.ts' },
+const shared = {
   bundle: true,
-  format: 'esm',
   target: 'chrome102',
   outdir: 'dist',
   sourcemap: true,
@@ -22,12 +20,19 @@ const options = {
   logLevel: 'info',
 }
 
+const builds = [
+  // The service worker and popup load as ES modules.
+  { ...shared, format: 'esm', entryPoints: { background: 'src/background/index.ts', popup: 'src/popup/popup.ts' } },
+  // Chrome runs content scripts as classic scripts, not modules.
+  { ...shared, format: 'iife', entryPoints: { content: 'src/content/index.ts' } },
+]
+
 await rm('dist', { recursive: true, force: true })
 await mkdir('dist', { recursive: true })
 await cp('static', 'dist', { recursive: true })
 
 if (process.argv.includes('--watch')) {
-  await (await context(options)).watch()
+  for (const options of builds) await (await context(options)).watch()
 } else {
-  await build(options)
+  await Promise.all(builds.map((options) => build(options)))
 }

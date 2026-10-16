@@ -2,21 +2,14 @@
 // http://127.0.0.1:8000 (`sponsor-check-api` in the backend repo). Not offline: run it with
 // `npm run e2e` once the API is up. The unit tests in tests/ mock the API instead.
 
-import path from 'node:path'
+import { expect, test, type BrowserContext } from '@playwright/test'
 
-import { chromium, expect, test, type BrowserContext } from '@playwright/test'
-
-// Derived from the public "key" in static/manifest.json, and allowlisted by the API's CORS default.
-const EXTENSION_ID = 'kiggiklmmmlkmjfaikamcihbinjhgcpo'
+import { EXTENSION_ID, launchWithExtension } from './extension'
 
 let context: BrowserContext
 
 test.beforeAll(async () => {
-  const dist = path.resolve('dist')
-  context = await chromium.launchPersistentContext('', {
-    channel: 'chromium', // the full build: the headless shell can't load extensions
-    args: [`--disable-extensions-except=${dist}`, `--load-extension=${dist}`],
-  })
+  context = await launchWithExtension()
 })
 
 test.afterAll(async () => {

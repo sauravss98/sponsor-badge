@@ -84,6 +84,11 @@ describe('panelFor', () => {
     })
   })
 
+  it('lists each route once when the register repeats a licence', () => {
+    const sw = { route: 'Skilled Worker', rating: 'A', type: 'Worker (A rating)' }
+    expect(panelFor({ ...starling, routes: [sw, sw] }).routes).toEqual(['Skilled Worker (A)'])
+  })
+
   it('falls back to the publication page when an older server sends no register_url', () => {
     const { register_url: _omitted, ...older } = starling
     expect(panelFor(older).registerUrl).toBe(
