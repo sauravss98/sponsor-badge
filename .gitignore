@@ -3,3 +3,4 @@ dist/
 *.pem
 test-results/
 playwright-report/
+fixtures/*_files/
