@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sponsor Badge</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Sponsor Badge</h1>
+      <p class="hint">Is this employer on the UK register of licensed visa sponsors?</p>
+
+      <form id="search" autocomplete="off">
+        <label for="name" class="visually-hidden">Employer name</label>
+        <input id="name" name="name" type="text" maxlength="200" required
+               placeholder="Employer name, e.g. Starling Bank" />
+        <button type="submit">Check</button>
+      </form>
+
+      <section id="result" aria-live="polite"></section>
+
+      <footer>
+        <p><strong>This is not immigration advice.</strong></p>
+        <p>Data: Home Office register of licensed sponsors. Contains public sector information
+          licensed under the
+          <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+             target="_blank" rel="noopener">Open Government Licence v3.0</a>.</p>
+      </footer>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

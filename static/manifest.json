@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Sponsor Badge",
+  "version": "0.1.0",
+  "description": "Shows whether a UK employer is on the Home Office register of licensed visa sponsors.",
+  "minimum_chrome_version": "102",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAl6dIem8XMphPJ4WIrAo/i2Oh/WwCAxv2EwjR0w4gw/MFw8i8mErmqFqPw3HWpIVFH17+SvVr73Xq521DNbyIZiMxIFU9Ina/+qmTon5aXYayUnTxSPtPtoUEBjBAL2ZhOn0LuiVeWHl1rmuG33vv/LDFXwg2vUSrT8DbTn6k3yzjJ40VymIumQ9EsPxAQNGQZsRWOf8v7+Vpk4azS3deFF0CREQZjIlgYvrlQ3RAbUpPvupNCrjqOoRluY5/OWK5pkjkn/ymBJ00SgPfB1AKiTo5wmSypDWKi9+nvGA7Z5bJ2O6yLwvcCNFXVopE4TL5r36wlVTFCDWmmIfibR3d9wIDAQAB",
+  "permissions": [
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Sponsor Badge"
+  }
+}

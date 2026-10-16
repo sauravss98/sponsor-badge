@@ -1,0 +1,23 @@
+{
+  "name": "sponsor-badge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that flags whether UK employers on job boards hold a Skilled Worker sponsor licence.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test && npm run build",
+    "e2e": "npm run build && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/chrome": "^0.3.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

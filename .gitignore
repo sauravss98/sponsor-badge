@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.pem
+test-results/
+playwright-report/
